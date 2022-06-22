@@ -56,6 +56,12 @@ def change_args(**kwargs):
 import os
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE" # Without this, pyplot crashes the kernal
 
+# This works, except it keeps saying "gimme password"
+def is_q_pressed(password = "wouldnt you like to know"):
+    q = os.popen("echo {} | sudo -S python is_q_pressed.py".format(password)).read()
+    return q == 'True'
+
+#%%
 
 
 import torch

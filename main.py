@@ -16,7 +16,7 @@ trainer_dict = {
     
     "t_curious" : lambda test, agent_name = "last": 
         Trainer(
-            change_args(eta = 5), 
+            change_args(eta = 5, eta_rate = .99999), 
             delete = not test,
             save_folder = "t_curious",
             load_folder = "t_curious" if test else None,

@@ -11,7 +11,7 @@ from copy import deepcopy
 from time import sleep
 
 from utils import args, save_agent, load_agent, get_rolling_average,reset_start_time, duration, \
-    remove_folder, make_folder, save_plot, delete_with_name, plot_rewards, plot_losses, plot_wins, plot_which, plot_cumulative_rewards, plot_positions
+    remove_folder, make_folder, is_q_pressed, save_plot, delete_with_name, plot_rewards, plot_losses, plot_wins, plot_which, plot_cumulative_rewards, plot_positions
 from env import Env
 from agent import Agent
 
@@ -42,8 +42,12 @@ tk= Tk()
 tk.geometry("200x200")
 def q_press(e):
     global q
-    if(e.char == "q"): q = True
-    if(e.char == "w"): q = False
+    if(not q and e.char == "q"): 
+        print("\nStarting GUI!\n")
+        q = True
+    if(q and e.char == "w"): 
+        print("\nStopping GUI!\n")
+        q = False
 
 tk.bind('<KeyPress>',q_press)
 
