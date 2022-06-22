@@ -13,6 +13,22 @@ trainer_dict = {
             save_folder = "t_non_curious",
             load_folder = "t_non_curious" if test else None,
             load_name = agent_name),
+        
+    "t_soft_only" : lambda test, agent_name = "last": 
+        Trainer(
+            change_args(eta = 0), 
+            delete = not test,
+            save_folder = "t_soft_only",
+            load_folder = "t_soft_only" if test else None,
+            load_name = agent_name),
+        
+    "t_friston_only" : lambda test, agent_name = "last": 
+        Trainer(
+            change_args(eta = 5, eta_rate = .99999, alpha = 0), 
+            delete = not test,
+            save_folder = "t_curious",
+            load_folder = "t_curious" if test else None,
+            load_name = agent_name),
     
     "t_curious" : lambda test, agent_name = "last": 
         Trainer(
@@ -52,6 +68,36 @@ for agent_name in agent_names:
 # %%
 
 test("t_non_curious")
+
+# %%
+train("t_soft_only")
+
+#%%
+agent_names = os.listdir("saves/t_soft_only/agents")
+agent_names.sort()
+for agent_name in agent_names:
+    agent_name = agent_name[6:-3]
+    print(agent_name)
+    positions("t_soft_only", agent_name, 10)
+
+# %%
+
+test("t_soft_only")
+
+# %%
+train("t_friston_only")
+
+#%%
+agent_names = os.listdir("saves/t_friston_only/agents")
+agent_names.sort()
+for agent_name in agent_names:
+    agent_name = agent_name[6:-3]
+    print(agent_name)
+    positions("t_friston_only", agent_name, 10)
+
+# %%
+
+test("t_friston_only")
 
 # %%
 
