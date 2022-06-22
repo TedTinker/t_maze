@@ -6,12 +6,12 @@ from utils import args, change_args
 from train import Trainer
 
 trainer_dict = {    
-    "t_non_curious" : lambda test, agent_name = "last": 
+    "t_not_curious" : lambda test, agent_name = "last": 
         Trainer(
             change_args(eta = 0, alpha = 0), 
             delete = not test,
-            save_folder = "t_non_curious",
-            load_folder = "t_non_curious" if test else None,
+            save_folder = "t_not_curious",
+            load_folder = "t_not_curious" if test else None,
             load_name = agent_name),
         
     "t_soft_only" : lambda test, agent_name = "last": 
@@ -55,19 +55,19 @@ def positions(trainer_name, agent_name, size = 5):
     trainer.env.close(forever=True)
     
 # %%
-train("t_non_curious")
+train("t_not_curious")
 
 #%%
-agent_names = os.listdir("saves/t_non_curious/agents")
+agent_names = os.listdir("saves/t_not_curious/agents")
 agent_names.sort()
 for agent_name in agent_names:
     agent_name = agent_name[6:-3]
     print(agent_name)
-    positions("t_non_curious", agent_name, 10)
+    positions("t_not_curious", agent_name, 10)
 
 # %%
 
-test("t_non_curious")
+test("t_not_curious")
 
 # %%
 train("t_soft_only")
