@@ -10,8 +10,8 @@ from tkinter import Tk
 from copy import deepcopy
 from time import sleep
 
-from utils import args, save_agent, load_agent, get_rolling_average,reset_start_time, duration, \
-    remove_folder, make_folder, is_q_pressed, save_plot, delete_with_name, plot_rewards, plot_losses, plot_wins, plot_which, plot_cumulative_rewards, plot_positions
+from utils import device, args, save_agent, load_agent, get_rolling_average,reset_start_time, duration, \
+    remove_folder, make_folder, delete_with_name, plot_rewards, plot_losses, plot_wins, plot_extrinsic_intrinsic, plot_which, plot_cumulative_rewards, plot_positions
 from env import Env
 from agent import Agent
 
@@ -19,11 +19,12 @@ def episode(env, agent, push = True, delay = False):
     env.reset()  
     done = False
     positions = []
-    while(done == False):
-        with torch.no_grad():
+    with torch.no_grad():
+        while(done == False):
             done, win, which, pos = env.step(agent)
             positions.append(pos)
             if(delay): sleep(.5)
+            torch.cuda.synchronize(device=device)
     env.body.to_push.finalize_rewards()
     rewards = deepcopy(env.body.to_push.rew)
     if(push): env.body.to_push.push(agent.memory)
@@ -87,6 +88,7 @@ class Trainer():
         else:
             save_agent(self.agent, suf = str(self.e), folder = self.save_folder)
         self.wins = []; self.wins_rolled = []; self.which = []
+        self.extrinsics = []; self.intrinsic_curiosities = []; self.intrinsic_entropies = []
         self.rewards = []; self.punishments = []
         self.losses = np.array([[None]*5])
         
@@ -111,8 +113,12 @@ class Trainer():
             if(rewards > 0): self.rewards.append(rewards); self.punishments.append(0)
             else:            self.punishments.append(rewards); self.rewards.append(0)
                     
-        losses = self.agent.learn(batch_size = self.args.batch_size, iterations = self.args.iterations, plot = plot)
+        losses, extrinsic, intrinsic_curiosity, intrinsic_entropy = \
+            self.agent.learn(batch_size = self.args.batch_size, iterations = self.args.iterations, plot = plot)
         self.losses = np.concatenate([self.losses, losses])
+        self.extrinsics.append(extrinsic)
+        self.intrinsic_curiosities.append(intrinsic_curiosity)
+        self.intrinsic_entropies.append(intrinsic_entropy)
 
         if(self.args.iterations == 1):  losses = np.expand_dims(losses,0)
 
@@ -122,16 +128,16 @@ class Trainer():
     def train(self):
         
         self.agent.train()
-        while(self.e < self.args.max_epochs):
+        prb = tqdm(range(self.args.max_epochs))
+        for e in prb:
             self.e += 1
-            if(self.e % 5 == 0):  
-                print("Epoch {}. {}.".format(self.e, duration()))
             self.epoch(plot = self.e % 25 == 0)
             if(self.e % self.args.show_and_save == 0): 
                 save_agent(self.agent, suf = self.e, folder = self.save_folder)
                 plot_wins(self.wins_rolled, name = "wins_{}".format(str(self.e).zfill(5)), folder = self.save_folder)
                 plot_which(self.which, name = "which_{}".format(str(self.e).zfill(5)), folder = self.save_folder)                
                 plot_cumulative_rewards(self.rewards, self.punishments)
+                plot_extrinsic_intrinsic(self.extrinsics, self.intrinsic_curiosities, self.intrinsic_entropies)
                 plot_losses(self.losses, too_long = self.args.too_long, d = self.args.d)
                 
             if(self.e >= self.args.max_epochs):
@@ -142,6 +148,7 @@ class Trainer():
                 plot_wins(self.wins_rolled, name = "wins_last", folder = self.save_folder)
                 plot_which(self.which, name = "which_last", folder = self.save_folder)
                 plot_cumulative_rewards(self.rewards, self.punishments, name = "cumulative_rewards", folder = self.save_folder)
+                plot_extrinsic_intrinsic(self.extrinsics, self.intrinsic_curiosities, self.intrinsic_entropies, name = "extrinsic_intrinsic", folder = self.save_folder)
                 plot_losses(self.losses, too_long = None, d = self.args.d, name = "losses", folder = self.save_folder)
                 break
     
@@ -159,4 +166,4 @@ class Trainer():
         for i in tqdm(range(size)):
             w, which, rewards, positions = self.one_episode(push = False)
             positions_list.append(positions)
-        plot_positions(positions_list, self.args.arena_name, agent_name, self.save_folder)
+        plot_positions(positions_list, self.args.arena_name)

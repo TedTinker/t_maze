@@ -8,7 +8,7 @@ from itertools import product
 from matplotlib import pyplot as plt
 from torchvision.transforms.functional import resize
 
-from utils import args, device, plot_rewards, add_discount
+from utils import args, plot_rewards, add_discount
 from arena import get_physics, Arena
 
 
@@ -140,7 +140,7 @@ class Env():
         image, speed = self.get_obs()
         with torch.no_grad():
             self.body.action, self.body.hidden = agent.act(
-                image.to(device), speed.to(device), self.body.hidden)
+                image, speed, self.body.hidden)
         yaw = -self.body.action[0].item() * self.args.max_yaw_change
         spe = self.args.min_speed + ((self.body.action[1].item() + 1)/2) * \
             (self.args.max_speed - self.args.min_speed)

@@ -56,15 +56,27 @@ class Agent:
     
     def learn(self, batch_size, iterations, num = -1, plot = False):
         if(iterations != 1):
-            losses = []
-            for i in range(iterations): losses.append(self.learn(batch_size, 1, num = i, plot = plot))
+            losses = []; extrinsic = []; intrinsic_curiosity = []; intrinsic_entropy = []
+            for i in range(iterations): 
+                l, e, ic, ie = self.learn(batch_size, 1, num = i, plot = plot)
+                losses.append(l); extrinsic.append(e)
+                intrinsic_curiosity.append(ic); intrinsic_entropy.append(ie)
             losses = np.concatenate(losses)
-            return(losses)
+            extrinsic = [e for e in extrinsic if e != None]
+            intrinsic_curiosity = [e for e in intrinsic_curiosity if e != None]
+            intrinsic_entropy = [e for e in intrinsic_entropy if e != None]
+            try: extrinsic = sum(extrinsic)/len(extrinsic)
+            except: extrinsic = None
+            try: intrinsic_curiosity = sum(intrinsic_curiosity)/len(intrinsic_curiosity)
+            except: intrinsic_curiosity = None
+            try: intrinsic_entropy = sum(intrinsic_entropy)/len(intrinsic_entropy)
+            except: intrinsic_entropy = None
+            return(losses, extrinsic, intrinsic_curiosity, intrinsic_entropy)
                 
         self.steps += 1
 
         try:    images, speeds, actions, rewards, dones, masks = self.memory.sample(batch_size)
-        except: return(np.array([[None]*5]))
+        except: return(np.array([[None]*5]), None, None, None)
         
         image_masks = torch.tile(masks.unsqueeze(-1).unsqueeze(-1), (self.args.image_size, self.args.image_size, 4))
         
@@ -122,6 +134,8 @@ class Agent:
             
             plot_curiosity(rewards.detach(), curiosity.detach(), masks.detach())
             
+        extrinsic = torch.mean(rewards).item()
+        intrinsic_curiosity = torch.mean(curiosity).item()
         rewards = torch.cat([rewards, curiosity], -1)
                 
         # Train critics
@@ -166,6 +180,7 @@ class Agent:
                 Q = torch.min(
                     self.critic1(encoded.detach(), actions_pred), 
                     self.critic2(encoded.detach(), actions_pred)).sum(-1).unsqueeze(-1)
+                intrinsic_entropy = torch.mean(self.alpha * log_pis.cpu()).item()
                 actor_loss = (self.alpha * log_pis.cpu() - Q.cpu() - policy_prior_log_probs)*masks.detach().cpu()
                 actor_loss = actor_loss.sum() / masks.sum()
             
@@ -182,6 +197,7 @@ class Agent:
                 Q = torch.min(
                     self.critic1(encoded.detach(), actions_pred.squeeze(0)), 
                     self.critic2(encoded.detach(), actions_pred.squeeze(0))).sum(-1).unsqueeze(-1)
+                intrinsic_entropy = torch.mean(self.args.alpha * log_pis.cpu()).item()
                 actor_loss = (self.args.alpha * log_pis.cpu() - Q.cpu()- policy_prior_log_probs)*masks.detach().cpu()
                 actor_loss = actor_loss.sum() / masks.sum()
 
@@ -193,6 +209,7 @@ class Agent:
             self.soft_update(self.critic2, self.critic2_target, self.args.tau)
             
         else:
+            intrinsic_entropy = None
             alpha_loss = None
             actor_loss = None
         
@@ -203,7 +220,7 @@ class Agent:
         if(critic2_loss != None): critic2_loss = critic2_loss.item()
         
         losses = np.array([[trans_loss, alpha_loss, actor_loss, critic1_loss, critic2_loss]])
-        return(losses)
+        return(losses, extrinsic, intrinsic_curiosity, intrinsic_entropy)
                      
     def soft_update(self, local_model, target_model, tau):
         for target_param, local_param in zip(target_model.parameters(), local_model.parameters()):

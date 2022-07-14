@@ -6,13 +6,8 @@ from torch.distributions import Normal
 from torchgan import layers as gann
 from torchinfo import summary as torch_summary
 
-import numpy as np
-from math import degrees
-from random import choice
-import matplotlib.pyplot as plt
-
-from utils import args, device, ConstrainedConv2d, \
-    init_weights, shape_out, flatten_shape, reshape_shape, cat_shape
+from utils import args, device, ConstrainedConv2d, delete_these,\
+    init_weights, shape_out, flatten_shape
 
 
 
@@ -122,6 +117,7 @@ class Transitioner(nn.Module):
         self.to(device)
         
     def just_encode(self, image, speed, hidden = None):
+        image = image.to(device); speed = speed.to(device)
         if(len(image.shape) == 4):  sequence = False
         else:                       sequence = True
         image = image.permute((0,1,-1,2,3) if sequence else (0, -1, 1, 2))
@@ -139,9 +135,11 @@ class Transitioner(nn.Module):
         else:               x, hidden = self.lstm(x, (hidden[0], hidden[1]))
         if(not sequence): x = x.view(x.shape[0], x.shape[-1])
         encoding = self.encode(x)
+        delete_these(False, image, speed, x)
         return(encoding, hidden) 
         
     def forward(self, image, speed, action):
+        action = action.to(device)
         encoding, _ = self.just_encode(image, speed)
         action = self.action_in(action)
         x = torch.cat((encoding, action), dim=-1)
@@ -153,6 +151,7 @@ class Transitioner(nn.Module):
         next_image = next_image.permute(0, 1, 3, 4, 2)
         next_image = torch.clamp(next_image, -1, 1)
         next_speed = self.next_speed(x)
+        delete_these(False, x, action)
         return(next_image, next_speed)
         
     def DKL(self, images, speeds, action, next_images, next_speeds, masks):
@@ -196,6 +195,7 @@ class Actor(nn.Module):
         mu = self.mu(x)
         log_std = self.log_std_linear(x)
         log_std = torch.clamp(log_std, self.log_std_min, self.log_std_max)
+        delete_these(False, encode)
         return mu, log_std
     
     def evaluate(self, encode, epsilon=1e-6):
@@ -236,6 +236,7 @@ class Critic(nn.Module):
     def forward(self, encode, action):
         x = torch.cat((encode, action), dim=-1)
         x = self.lin(x)
+        delete_these(False, encode, action)
         return x
     
     

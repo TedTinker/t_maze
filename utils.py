@@ -56,12 +56,7 @@ def change_args(**kwargs):
 import os
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE" # Without this, pyplot crashes the kernal
 
-# This works, except it keeps saying "gimme password"
-def is_q_pressed(password = "wouldnt you like to know"):
-    q = os.popen("echo {} | sudo -S python is_q_pressed.py".format(password)).read()
-    return q == 'True'
 
-#%%
 
 
 import torch
@@ -74,6 +69,20 @@ else:                       print("\n\nUsing CUDA! :D\n")
 
 
 
+# Monitor GPU memory.
+def get_free_mem(string = ""):
+    r = torch.cuda.memory_reserved(0)
+    a = torch.cuda.memory_allocated(0)
+    f = r-a  # free inside reserved
+    print("\n{}: {}.\n".format(string, f))
+
+# Remove from GPU memory.
+def delete_these(verbose = False, *args):
+    if(verbose): get_free_mem("Before deleting")
+    del args
+    torch.cuda.empty_cache()
+    if(verbose): get_free_mem("After deleting")
+    
 def shape_out(layer, shape_in):
     example = torch.zeros(shape_in)
     example = layer(example)
@@ -206,6 +215,36 @@ def plot_cumulative_rewards(rewards, punishments, name = None, folder = "default
     plt.close()
     
     
+def get_x_y(losses, too_long = None):
+    x = [i for i in range(len(losses)) if losses[i] != None]
+    y = [l for l in losses if l != None]
+    if(too_long != None and len(x) > too_long):
+        x = x[-too_long:]; y = y[-too_long:]
+    return(x, y)
+
+
+# How to plot extrinsic vs intrinsic.
+def plot_extrinsic_intrinsic(extrinsic, intrinsic_curiosity, intrinsic_entropy, name = None, folder = "default"):
+    ex, ey     = get_x_y(extrinsic)
+    icx, icy     = get_x_y(intrinsic_curiosity)
+    iex, iey     = get_x_y(intrinsic_entropy)
+    
+    plt.xlabel("Epochs")
+    plt.ylabel("Value")
+
+    plt.plot(ex,  ey,  color = "red",   label = "Extrinsic")
+    plt.plot(icx, icy, color = "green", label = "Curiosity")
+    plt.plot(iex, iey, color = "blue",  label = "Entropy")
+    plt.legend(loc = 'upper left')
+    
+    plt.title("Extrinsic vs Intrinsic Rewards")
+    if(name!=None):
+        print("SHOULD BE SAVING EXTRINSIC INTERNSIC")
+        save_plot(name+"_agent", folder)
+    plt.show()
+    plt.close()
+    
+    
 # Compare rewards to curiosity.
 def plot_curiosity(rewards, curiosity, masks, name = None, folder = "default"):
     fig, ax1 = plt.subplots()    
@@ -227,21 +266,19 @@ def plot_curiosity(rewards, curiosity, masks, name = None, folder = "default"):
     plt.close()
     
             
+
 # How to plot losses.
-def get_x_y(losses, too_long):
-    x = [i for i in range(len(losses)) if losses[i] != None]
-    y = [l for l in losses if l != None]
-    if(too_long != None and len(x) > too_long):
-        x = x[-too_long:]; y = y[-too_long:]
-    return(x, y)
-
 def plot_losses(losses, too_long, d, name = None, folder = "default"):
-
     trans_losses   = losses[:,0]
     alpha_losses   = losses[:,1]
     actor_losses   = losses[:,2]
     critic1_losses = losses[:,3]
     critic2_losses = losses[:,4]
+    
+    if(len(alpha_losses) == len([a for a in alpha_losses if a == None])):
+        no_alpha = True 
+    else:
+        no_alpha = False
     
     trans_x, trans_y     = get_x_y(trans_losses, too_long)
     alpha_x, alpha_y     = get_x_y(alpha_losses, too_long)
@@ -273,11 +310,12 @@ def plot_losses(losses, too_long, d, name = None, folder = "default"):
     ax2.set_ylabel("Critic losses")
     ax2.legend(loc = 'lower left')
     
-    ax3 = ax1.twinx()
-    ax3.spines["right"].set_position(("axes", 1.2))
-    ax3.plot(alpha_x, alpha_y, color = (0,0,0,.5), label = "Alpha")
-    ax3.set_ylabel("Alpha losses")
-    ax3.legend(loc = 'upper right')
+    if(not no_alpha):
+        ax3 = ax1.twinx()
+        ax3.spines["right"].set_position(("axes", 1.2))
+        ax3.plot(alpha_x, alpha_y, color = (0,0,0,.5), label = "Alpha")
+        ax3.set_ylabel("Alpha losses")
+        ax3.legend(loc = 'upper right')
     
     plt.title("Agent losses")
     fig.tight_layout()
@@ -289,7 +327,6 @@ def plot_losses(losses, too_long, d, name = None, folder = "default"):
   
 # How to plot victory-rates.
 def plot_wins(wins, name = None, folder = "default"):
-    total_length = len(wins)
     x = [i for i in range(1, len(wins)+1)]
     plt.plot(x, wins, color = "gray")
     plt.ylim([0, 1])
@@ -302,7 +339,6 @@ def plot_wins(wins, name = None, folder = "default"):
     
 # How to plot kinds of victory.
 def plot_which(which, name = None, folder = "default"):
-    total_length = len(which)
     x = [i for i in range(1, len(which)+1)]
     plt.scatter(x, which, color = "gray")
     plt.title("Kind of Win")
@@ -312,24 +348,28 @@ def plot_which(which, name = None, folder = "default"):
     plt.show()
     plt.close()
 
-def plot_positions(positions_list, arena_name, agent_name, folder = "default"):
+from colour import Color
+def plot_positions(positions_lists, arena_name, agent_name, folder = "default"):
     arena_map = plt.imread("arenas/" + arena_name + ".png")
     arena_map = np.flip(arena_map, 0)    
     h, w, _ = arena_map.shape
     fig, ax = plt.subplots()
-    #ax.xaxis.set_visible(False)
-    #ax.yaxis.set_visible(False)
-    ax.imshow(arena_map, extent=[-.5, w-.5, -h+.5, .5], zorder = 1, origin='lower')
-    for positions in positions_list:
-        x = [p[1] for p in positions]
-        y = [-p[0] for p in positions]
-        ax.plot(x, y, zorder = 2)
-        ax.scatter(x[-1], y[-1], s = 100, color = "black", marker = "*", zorder = 3)
-        ax.scatter(x[-1], y[-1], s = 75, marker = "*", zorder = 4)
-    plt.title("Tracks of agent {}".format(agent_name))
-    save_plot("tracks_" + agent_name, folder)
-    plt.show()
+    ax.xaxis.set_visible(False)
+    ax.yaxis.set_visible(False)
+    ax.imshow(arena_map, extent=[-.5, w-.5, -h+.5, .5], zorder = 1, origin='lower') 
+    colors = list(Color("red").range_to(Color("green"), len(positions_lists))) 
+    for i, positions_list in enumerate(positions_lists):
+        for positions in positions_list:
+            x = [p[1] for p in positions]
+            y = [-p[0] for p in positions]
+            ax.plot(x, y, zorder = 2, color = colors[i].rgb, alpha = .5)
+            ax.scatter(x[-1], y[-1], s = 100, color = "black", alpha = .5, marker = "*", zorder = 3)
+            ax.scatter(x[-1], y[-1], s = 75, color = colors[i].rgb, alpha = .5, marker = "*", zorder = 4)
+    plt.title("Tracks of agent {}".format(agent_name)) 
+    save_plot("tracks_" + agent_name, folder) 
+    plt.show() 
     plt.close()
+
 
       
   

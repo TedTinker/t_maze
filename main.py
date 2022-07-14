@@ -2,116 +2,121 @@
 
 import os
 
-from utils import args, change_args
+from utils import change_args, plot_positions
 from train import Trainer
 
 trainer_dict = {    
-    "t_not_curious" : lambda test, agent_name = "last": 
-        Trainer(
-            change_args(eta = 0, alpha = 0), 
-            delete = not test,
-            save_folder = "t_not_curious",
-            load_folder = "t_not_curious" if test else None,
-            load_name = agent_name),
+    
+	"t_none" : lambda test, num, load_name = "last":
+    	Trainer(
+        	change_args(eta = 0, alpha = 0),
+        	delete = not test,
+        	save_folder = "t_none_{}".format(str(num).zfill(3)),
+        	load_folder = "t_none_{}".format(str(num).zfill(3)) if test else None,
+        	load_name = load_name),
         
-    "t_soft_only" : lambda test, agent_name = "last": 
-        Trainer(
-            change_args(eta = 0), 
-            delete = not test,
-            save_folder = "t_soft_only",
-            load_folder = "t_soft_only" if test else None,
-            load_name = agent_name),
+	"t_entropy" : lambda test, num, load_name = "last":
+    	Trainer(
+        	change_args(eta = 0),
+        	delete = not test,
+        	save_folder = "t_entropy_{}".format(str(num).zfill(3)),
+        	load_folder = "t_entropy_{}".format(str(num).zfill(3)) if test else None,
+        	load_name = load_name),
         
-    "t_friston_only" : lambda test, agent_name = "last": 
-        Trainer(
-            change_args(eta = 5, eta_rate = .99999, alpha = 0), 
-            delete = not test,
-            save_folder = "t_curious",
-            load_folder = "t_curious" if test else None,
-            load_name = agent_name),
-    
-    "t_curious" : lambda test, agent_name = "last": 
-        Trainer(
-            change_args(eta = 5, eta_rate = .99999), 
-            delete = not test,
-            save_folder = "t_curious",
-            load_folder = "t_curious" if test else None,
-            load_name = agent_name)
-    }
+	"t_curious" : lambda test, num, load_name = "last":
+    	Trainer(
+        	change_args(eta = 0, alpha = 0),
+        	delete = not test,
+        	save_folder = "t_curious_{}".format(str(num).zfill(3)),
+        	load_folder = "t_curious_{}".format(str(num).zfill(3)) if test else None,
+        	load_name = load_name)}
 
-def train(trainer_name):
-    trainer = trainer_dict[trainer_name](False)
-    trainer.train()
-    trainer.env.close(forever=True)
-
-def test(trainer_name):
-    trainer = trainer_dict[trainer_name](True)
-    trainer.test()
-    trainer.env.close(forever=True)
+def train(trainer_name, num):
+	trainer = trainer_dict[trainer_name](False, num)
+	trainer.train()
+	trainer.env.close(forever=True)
+ 
+def test(trainer_name, num):
+	trainer = trainer_dict[trainer_name](True, num)
+	trainer.test()
+	trainer.env.close(forever=True)
     
-def positions(trainer_name, agent_name, size = 5):
-    trainer = trainer_dict[trainer_name](True, agent_name)
-    trainer.get_positions(size = size, agent_name = agent_name)
-    trainer.env.close(forever=True)
+def positions(trainer_name, num, load_name, size = 5):
+	trainer = trainer_dict[trainer_name[:-4]](True, num, load_name)
+	positions_list, arena_name = trainer.get_positions(size = size)
+	trainer.env.close(forever=True)
+	return(positions_list, arena_name)
+ 
+agent_variety = 5
     
 # %%
-train("t_not_curious")
+for i in range(agent_variety):
+	train("t_none", i)
+ 
+#%%
+folders = []
+f = os.listdir("saves")
+for folder in f:
+    if(folder[:-4] == "t_none"):
+        folders.append(folder)
+folders.sort()
+ 
+load_names = os.listdir("saves/" + folders[0] + "/agents")
+load_names.sort()
+ 
+for load_name in load_names:
+    load_name = load_name[6:-3]
+    positions_lists = []
+    for i, folder in enumerate(folders):
+        print(folder, load_name)
+        positions_list, arena_name = positions(folder, i, load_name, 10)
+        positions_lists.append(positions_list)
+    plot_positions(positions_lists, arena_name, load_name, folder = "t_none_positions")
 
 #%%
-agent_names = os.listdir("saves/t_not_curious/agents")
-agent_names.sort()
-for agent_name in agent_names:
-    agent_name = agent_name[6:-3]
-    print(agent_name)
-    positions("t_not_curious", agent_name, 10)
-
-# %%
-
-test("t_not_curious")
-
-# %%
-train("t_soft_only")
-
+for i in range(agent_variety):
+	train("t_entropy", i)
+ 
 #%%
-agent_names = os.listdir("saves/t_soft_only/agents")
-agent_names.sort()
-for agent_name in agent_names:
-    agent_name = agent_name[6:-3]
-    print(agent_name)
-    positions("t_soft_only", agent_name, 10)
-
-# %%
-
-test("t_soft_only")
-
-# %%
-train("t_friston_only")
-
+folders = []
+f = os.listdir("saves")
+for folder in f:
+    if(folder[:-4] == "t_entropy"):
+        folders.append(folder)
+folders.sort()
+ 
+load_names = os.listdir("saves/" + folders[0] + "/agents")
+load_names.sort()
+ 
+for load_name in load_names:
+    load_name = load_name[6:-3]
+    positions_lists = []
+    for i, folder in enumerate(folders):
+        print(folder, load_name)
+        positions_list, arena_name = positions(folder, i, load_name, 10)
+        positions_lists.append(positions_list)
+    plot_positions(positions_lists, arena_name, load_name, folder = "t_entropy_positions")
+    
 #%%
-agent_names = os.listdir("saves/t_friston_only/agents")
-agent_names.sort()
-for agent_name in agent_names:
-    agent_name = agent_name[6:-3]
-    print(agent_name)
-    positions("t_friston_only", agent_name, 10)
-
-# %%
-
-test("t_friston_only")
-
-# %%
-
-train("t_curious")
-
+for i in range(agent_variety):
+	train("t_curious", i)
+ 
 #%%
-agent_names = os.listdir("saves/t_curious/agents")
-agent_names.sort()
-for agent_name in agent_names:
-    agent_name = agent_name[6:-3]
-    print(agent_name)
-    positions("t_curious", agent_name, 10)
-
-# %%
-
-test("t_curious")
-# %%
+folders = []
+f = os.listdir("saves")
+for folder in f:
+    if(folder[:-4] == "t_curious"):
+        folders.append(folder)
+folders.sort()
+ 
+load_names = os.listdir("saves/" + folders[0] + "/agents")
+load_names.sort()
+ 
+for load_name in load_names:
+    load_name = load_name[6:-3]
+    positions_lists = []
+    for i, folder in enumerate(folders):
+        print(folder, load_name)
+        positions_list, arena_name = positions(folder, i, load_name, 10)
+        positions_lists.append(positions_list)
+    plot_positions(positions_lists, arena_name, load_name, folder = "t_curious_positions")
