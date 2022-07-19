@@ -26,7 +26,7 @@ def get_args():
     parser.add_argument('--episodes_per_epoch', type=int,   default = 1)
     parser.add_argument('--show_and_save',      type=int,   default = 100)
     parser.add_argument('--too_long',           type=int,   default = 300)
-    parser.add_argument('--iterations',         type=int,   default = 16)
+    parser.add_argument('--iterations',         type=int,   default = 4)
     parser.add_argument('--batch_size',         type=int,   default = 32)
     parser.add_argument('--hidden_size',        type=int,   default = 128)
     parser.add_argument('--encode_size',        type=int,   default = 128)
@@ -247,7 +247,7 @@ def plot_extrinsic_intrinsic(extrinsic, intrinsic_curiosity, intrinsic_entropy, 
     plt.legend(loc = 'upper left')
     
     plt.title("Average Extrinsic vs Intrinsic Rewards")
-    if(name!=None): save_plot(name+"_agent", folder)
+    if(name!=None): save_plot("total_" + name +"_agent", folder)
     plt.show()
     plt.close()
     
@@ -264,7 +264,7 @@ def plot_extrinsic_intrinsic(extrinsic, intrinsic_curiosity, intrinsic_entropy, 
     plt.legend()
     
     plt.title("Normalized average Extrinsic vs Intrinsic Rewards")
-    if(name!=None): save_plot(name+"_agent", folder)
+    if(name!=None): save_plot("average_" + name +"_agent", folder)
     plt.show()
     plt.close()
     
