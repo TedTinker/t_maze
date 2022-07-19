@@ -9,7 +9,7 @@ trainer_dict = {
     
 	"t_none" : lambda test, num, load_name = "last":
     	Trainer(
-        	change_args(eta = 0, alpha = 0),
+        	change_args(eta = 0, alpha = 0, target_entropy = 0),
         	delete = not test,
         	save_folder = "t_none_{}".format(str(num).zfill(3)),
         	load_folder = "t_none_{}".format(str(num).zfill(3)) if test else None,
@@ -25,7 +25,7 @@ trainer_dict = {
         
 	"t_curious" : lambda test, num, load_name = "last":
     	Trainer(
-        	change_args(eta = 0, alpha = 0),
+        	change_args(alpha = 0, target_entropy = 0),
         	delete = not test,
         	save_folder = "t_curious_{}".format(str(num).zfill(3)),
         	load_folder = "t_curious_{}".format(str(num).zfill(3)) if test else None,
@@ -44,10 +44,9 @@ def test(trainer_name, num):
 def positions(trainer_name, num, load_name, size = 5):
 	trainer = trainer_dict[trainer_name[:-4]](True, num, load_name)
 	positions_list, arena_name = trainer.get_positions(size = size)
-	trainer.env.close(forever=True)
 	return(positions_list, arena_name)
  
-agent_variety = 5
+agent_variety = 1
     
 # %%
 for i in range(agent_variety):
@@ -63,7 +62,7 @@ folders.sort()
  
 load_names = os.listdir("saves/" + folders[0] + "/agents")
 load_names.sort()
- 
+
 for load_name in load_names:
     load_name = load_name[6:-3]
     positions_lists = []

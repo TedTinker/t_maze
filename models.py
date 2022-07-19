@@ -38,10 +38,7 @@ class Transitioner(nn.Module):
             nn.MaxPool2d(
                 kernel_size = (3,3), 
                 stride = (2,2),
-                padding = (1,1)),
-            gann.SelfAttention2d(
-                input_dims = 32, 
-                return_attn=False))
+                padding = (1,1)))
         
         self.speed_in = nn.Sequential(
             nn.Linear(1, args.hidden_size),
@@ -74,9 +71,6 @@ class Transitioner(nn.Module):
             nn.LeakyReLU()) 
         
         self.next_image_2 = nn.Sequential(
-            gann.SelfAttention2d(
-                input_dims = 32, 
-                return_attn=False),
             ConstrainedConv2d(
                 in_channels = 32, 
                 out_channels = 32,

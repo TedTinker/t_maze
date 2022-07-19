@@ -25,7 +25,7 @@ class Agent:
         self.steps = 0
         self.action_size = 2
         
-        self.target_entropy = -2  # -dim(A)
+        self.target_entropy = self.args.target_entropy # -dim(A)
         self.alpha = 1
         self.log_alpha = torch.tensor([0.0], requires_grad=True)
         self.alpha_optimizer = optim.Adam(params=[self.log_alpha], lr=self.args.lr) 
@@ -105,37 +105,37 @@ class Agent:
         
         plot = True if num == 0 and plot else False
         if(plot):
-            batch_num = choice([i for i in range(self.args.batch_size)])
-            step_num =  choice([i for i in range(self.args.max_steps) if masks[batch_num, i] == 1])
-            image_plot = (images[batch_num,step_num,:,:,:-1].cpu().detach() + 1) / 2
-            pred_next_image_plot = (pred_next_images[batch_num,step_num,:,:,:-1].cpu().detach() + 1) / 2
-            next_image_plot = (images[batch_num,step_num+1,:,:,:-1].cpu().detach() + 1) / 2
-            yaw = actions[batch_num,step_num,0].item() * self.args.max_yaw_change
-            yaw = round(degrees(yaw))
-            spe = self.args.min_speed + ((actions[batch_num,step_num,1].item() + 1)/2) * \
-                (self.args.max_speed - self.args.min_speed)
-            spe = round(spe)
-            fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
-            ax1.title.set_text("Before")
-            ax1.imshow(image_plot)
-            ax1.axis('off')
-            ax2.title.set_text("Prediction")
-            ax2.imshow(pred_next_image_plot)
-            ax2.axis('off')
-            ax3.title.set_text("After")
-            ax3.imshow(next_image_plot)
-            ax3.axis('off')
-            fig.suptitle("Step {}: Action: {} degrees, {} speed".format(step_num, yaw, spe))
-            fig.tight_layout()
-            fig.subplots_adjust(top=1.2)
-            plt.show()
-            plt.close()
+            for _ in range(3):
+                batch_num = choice([i for i in range(self.args.batch_size)])
+                step_num =  choice([i for i in range(self.args.max_steps) if masks[batch_num, i] == 1])
+                image_plot = (images[batch_num,step_num,:,:,:-1].cpu().detach() + 1) / 2
+                pred_next_image_plot = (pred_next_images[batch_num,step_num,:,:,:-1].cpu().detach() + 1) / 2
+                next_image_plot = (images[batch_num,step_num+1,:,:,:-1].cpu().detach() + 1) / 2
+                yaw = actions[batch_num,step_num,0].item() * self.args.max_yaw_change
+                yaw = round(degrees(yaw))
+                spe = self.args.min_speed + ((actions[batch_num,step_num,1].item() + 1)/2) * \
+                    (self.args.max_speed - self.args.min_speed)
+                spe = round(spe)
+                fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
+                ax1.title.set_text("Before")
+                ax1.imshow(image_plot)
+                ax1.axis('off')
+                ax2.title.set_text("Prediction")
+                ax2.imshow(pred_next_image_plot)
+                ax2.axis('off')
+                ax3.title.set_text("After")
+                ax3.imshow(next_image_plot)
+                ax3.axis('off')
+                fig.suptitle("Step {}: Action: {} degrees, {} speed".format(step_num, yaw, spe))
+                fig.tight_layout()
+                fig.subplots_adjust(top=1.2)
+                plt.show()
+                plt.close()
             print()
-            
             plot_curiosity(rewards.detach(), curiosity.detach(), masks.detach())
             
-        extrinsic = torch.mean(rewards).item()
-        intrinsic_curiosity = torch.mean(curiosity).item()
+        extrinsic = torch.mean(rewards*masks.detach()).item()
+        intrinsic_curiosity = torch.mean(curiosity*masks.detach()).item()
         rewards = torch.cat([rewards, curiosity], -1)
                 
         # Train critics
@@ -180,7 +180,7 @@ class Agent:
                 Q = torch.min(
                     self.critic1(encoded.detach(), actions_pred), 
                     self.critic2(encoded.detach(), actions_pred)).sum(-1).unsqueeze(-1)
-                intrinsic_entropy = torch.mean(self.alpha * log_pis.cpu()).item()
+                intrinsic_entropy = torch.mean((self.alpha * log_pis.cpu())*masks.detach().cpu()).item()
                 actor_loss = (self.alpha * log_pis.cpu() - Q.cpu() - policy_prior_log_probs)*masks.detach().cpu()
                 actor_loss = actor_loss.sum() / masks.sum()
             
@@ -197,7 +197,7 @@ class Agent:
                 Q = torch.min(
                     self.critic1(encoded.detach(), actions_pred.squeeze(0)), 
                     self.critic2(encoded.detach(), actions_pred.squeeze(0))).sum(-1).unsqueeze(-1)
-                intrinsic_entropy = torch.mean(self.args.alpha * log_pis.cpu()).item()
+                intrinsic_entropy = torch.mean((self.args.alpha * log_pis.cpu())*masks.detach().cpu()).item()
                 actor_loss = (self.args.alpha * log_pis.cpu() - Q.cpu()- policy_prior_log_probs)*masks.detach().cpu()
                 actor_loss = actor_loss.sum() / masks.sum()
 

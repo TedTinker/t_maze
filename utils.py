@@ -24,7 +24,7 @@ def get_args():
     
     parser.add_argument('--max_epochs',         type=int,   default = 1000)
     parser.add_argument('--episodes_per_epoch', type=int,   default = 1)
-    parser.add_argument('--show_and_save',      type=int,   default = 25)
+    parser.add_argument('--show_and_save',      type=int,   default = 100)
     parser.add_argument('--too_long',           type=int,   default = 300)
     parser.add_argument('--iterations',         type=int,   default = 16)
     parser.add_argument('--batch_size',         type=int,   default = 32)
@@ -34,6 +34,7 @@ def get_args():
     
     parser.add_argument('--lr',                 type=float, default = .001) # Learning rate
     parser.add_argument("-alpha",               type=float, default = None) # Soft-Actor-Critic entropy aim
+    parser.add_argument("-target_entropy",      type=float, default = -2)   # Soft-Actor-Critic entropy aim
     parser.add_argument("-d",                   type=int,   default = 2)    # Delay to train actors
     parser.add_argument("-eta",                 type=float, default = 5)    # Scale curiosity
     parser.add_argument("-eta_rate",            type=float, default = 1)    # Scale eta
@@ -222,28 +223,50 @@ def get_x_y(losses, too_long = None):
         x = x[-too_long:]; y = y[-too_long:]
     return(x, y)
 
+def normalize(this):
+    if(all(i == 0 for i in this)): pass
+    else:
+        minimum = min(this); maximum = max(this)
+        this = [2*((i - minimum) / (maximum - minimum))-1 for i in this]
+    return(this)
+
 
 # How to plot extrinsic vs intrinsic.
 def plot_extrinsic_intrinsic(extrinsic, intrinsic_curiosity, intrinsic_entropy, name = None, folder = "default"):
-    ex, ey     = get_x_y(extrinsic)
+    
+    ex, ey       = get_x_y(extrinsic)
     icx, icy     = get_x_y(intrinsic_curiosity)
     iex, iey     = get_x_y(intrinsic_entropy)
     
     plt.xlabel("Epochs")
     plt.ylabel("Value")
 
-    plt.plot(ex,  ey,  color = "red",   label = "Extrinsic")
     plt.plot(icx, icy, color = "green", label = "Curiosity")
     plt.plot(iex, iey, color = "blue",  label = "Entropy")
+    plt.plot(ex,  ey,  color = "red",   label = "Extrinsic")
     plt.legend(loc = 'upper left')
     
-    plt.title("Extrinsic vs Intrinsic Rewards")
-    if(name!=None):
-        print("SHOULD BE SAVING EXTRINSIC INTERNSIC")
-        save_plot(name+"_agent", folder)
+    plt.title("Average Extrinsic vs Intrinsic Rewards")
+    if(name!=None): save_plot(name+"_agent", folder)
     plt.show()
     plt.close()
     
+    ey = normalize(ey)
+    icy = normalize(icy)
+    iey = normalize(iey)
+    
+    plt.xlabel("Epochs")
+    plt.ylabel("Value")
+
+    plt.plot(icx, icy, color = "green", label = "Curiosity")
+    plt.plot(iex, iey, color = "blue",  label = "Entropy")
+    plt.plot(ex,  ey,  color = "red",   label = "Extrinsic")
+    plt.legend(loc = 'upper left')
+    
+    plt.title("Normalized average Extrinsic vs Intrinsic Rewards")
+    if(name!=None): save_plot(name+"_agent", folder)
+    plt.show()
+    plt.close()
     
 # Compare rewards to curiosity.
 def plot_curiosity(rewards, curiosity, masks, name = None, folder = "default"):
@@ -348,8 +371,8 @@ def plot_which(which, name = None, folder = "default"):
     plt.show()
     plt.close()
 
-from colour import Color
-def plot_positions(positions_lists, arena_name, agent_name, folder = "default"):
+from colorsys import hsv_to_rgb
+def plot_positions(positions_lists, arena_name, load_name, folder = "default"):
     arena_map = plt.imread("arenas/" + arena_name + ".png")
     arena_map = np.flip(arena_map, 0)    
     h, w, _ = arena_map.shape
@@ -357,16 +380,20 @@ def plot_positions(positions_lists, arena_name, agent_name, folder = "default"):
     ax.xaxis.set_visible(False)
     ax.yaxis.set_visible(False)
     ax.imshow(arena_map, extent=[-.5, w-.5, -h+.5, .5], zorder = 1, origin='lower') 
-    colors = list(Color("red").range_to(Color("green"), len(positions_lists))) 
+    colors = []
+    for i in range(len(positions_lists)):
+        hue = i/len(positions_lists)
+        r, g, b = hsv_to_rgb(hue, 1, 1)
+        colors.append((r, g, b))
     for i, positions_list in enumerate(positions_lists):
         for positions in positions_list:
             x = [p[1] for p in positions]
             y = [-p[0] for p in positions]
-            ax.plot(x, y, zorder = 2, color = colors[i].rgb, alpha = .5)
+            ax.plot(x, y, zorder = 2, color = colors[i], alpha = .5)
             ax.scatter(x[-1], y[-1], s = 100, color = "black", alpha = .5, marker = "*", zorder = 3)
-            ax.scatter(x[-1], y[-1], s = 75, color = colors[i].rgb, alpha = .5, marker = "*", zorder = 4)
-    plt.title("Tracks of agent {}".format(agent_name)) 
-    save_plot("tracks_" + agent_name, folder) 
+            ax.scatter(x[-1], y[-1], s = 75, color = colors[i], alpha = .5, marker = "*", zorder = 4)
+    plt.title("Tracks of agents {}".format(load_name)) 
+    save_plot("tracks_" + load_name, folder) 
     plt.show() 
     plt.close()
 

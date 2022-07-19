@@ -86,7 +86,7 @@ class Trainer():
             self.agent = load_agent(
                 self.agent, suf = self.load_name, folder = self.load_folder)
         else:
-            save_agent(self.agent, suf = str(self.e), folder = self.save_folder)
+            save_agent(self.agent, suf = self.e, folder = self.save_folder)
         self.wins = []; self.wins_rolled = []; self.which = []
         self.extrinsics = []; self.intrinsic_curiosities = []; self.intrinsic_entropies = []
         self.rewards = []; self.punishments = []
@@ -131,7 +131,7 @@ class Trainer():
         prb = tqdm(range(self.args.max_epochs))
         for e in prb:
             self.e += 1
-            self.epoch(plot = self.e % 25 == 0)
+            self.epoch(plot = self.e % self.args.show_and_save == 0)
             if(self.e % self.args.show_and_save == 0): 
                 save_agent(self.agent, suf = self.e, folder = self.save_folder)
                 plot_wins(self.wins_rolled, name = "wins_{}".format(str(self.e).zfill(5)), folder = self.save_folder)
@@ -142,7 +142,7 @@ class Trainer():
                 
             if(self.e >= self.args.max_epochs):
                 print("\n\nFinished!\n\n")
-                save_agent(self.agent, suf = "last", folder = self.save_folder)
+                save_agent(self.agent, suf = self.e, folder = self.save_folder)
                 delete_with_name("wins", folder = self.save_folder, subfolder = "plots")
                 delete_with_name("which", folder = self.save_folder, subfolder = "plots")
                 plot_wins(self.wins_rolled, name = "wins_last", folder = self.save_folder)
@@ -166,4 +166,4 @@ class Trainer():
         for i in tqdm(range(size)):
             w, which, rewards, positions = self.one_episode(push = False)
             positions_list.append(positions)
-        plot_positions(positions_list, self.args.arena_name)
+        return(positions_list, self.args.arena_name)
