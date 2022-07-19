@@ -139,7 +139,7 @@ class Trainer():
                 plot_cumulative_rewards(self.rewards, self.punishments)
                 plot_extrinsic_intrinsic(self.extrinsics, self.intrinsic_curiosities, self.intrinsic_entropies)
                 plot_losses(self.losses, too_long = self.args.too_long, d = self.args.d)
-                
+                print()
             if(self.e >= self.args.max_epochs):
                 print("\n\nFinished!\n\n")
                 save_agent(self.agent, suf = self.e, folder = self.save_folder)
@@ -150,6 +150,7 @@ class Trainer():
                 plot_cumulative_rewards(self.rewards, self.punishments, name = "cumulative_rewards", folder = self.save_folder)
                 plot_extrinsic_intrinsic(self.extrinsics, self.intrinsic_curiosities, self.intrinsic_entropies, name = "extrinsic_intrinsic", folder = self.save_folder)
                 plot_losses(self.losses, too_long = None, d = self.args.d, name = "losses", folder = self.save_folder)
+                print()
                 break
     
     def test(self, size = 100):

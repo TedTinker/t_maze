@@ -261,7 +261,7 @@ def plot_extrinsic_intrinsic(extrinsic, intrinsic_curiosity, intrinsic_entropy, 
     plt.plot(icx, icy, color = "green", label = "Curiosity")
     plt.plot(iex, iey, color = "blue",  label = "Entropy")
     plt.plot(ex,  ey,  color = "red",   label = "Extrinsic")
-    plt.legend(loc = 'upper left')
+    plt.legend()
     
     plt.title("Normalized average Extrinsic vs Intrinsic Rewards")
     if(name!=None): save_plot(name+"_agent", folder)

@@ -23,18 +23,7 @@ class Transitioner(nn.Module):
                 kernel_size = (3,3),
                 padding = (1,1),
                 padding_mode="reflect"),
-            nn.LeakyReLU(),
-            nn.MaxPool2d(
-                kernel_size = (3,3), 
-                stride = (2,2),
-                padding = (1,1)),
-            ConstrainedConv2d(
-                in_channels = 16, 
-                out_channels = 32,
-                kernel_size = (3,3),
-                padding = (1,1),
-                padding_mode="reflect"),
-            nn.LeakyReLU(),
+            nn.PReLU(),
             nn.MaxPool2d(
                 kernel_size = (3,3), 
                 stride = (2,2),
@@ -42,7 +31,7 @@ class Transitioner(nn.Module):
         
         self.speed_in = nn.Sequential(
             nn.Linear(1, args.hidden_size),
-            nn.LeakyReLU())
+            nn.PReLU())
         
         shape = (1, 4, args.image_size, args.image_size)
         next_shape = shape_out(self.image_in, shape)
@@ -54,21 +43,21 @@ class Transitioner(nn.Module):
             batch_first = True)
         
         self.encode = nn.Sequential(
-            nn.LeakyReLU(),
+            nn.PReLU(),
             nn.Linear(args.lstm_size, args.hidden_size),
-            nn.LeakyReLU(),
+            nn.PReLU(),
             nn.Linear(args.hidden_size, args.encode_size),
-            nn.LeakyReLU())
+            nn.PReLU())
         
         self.action_in = nn.Sequential(
             nn.Linear(2, args.hidden_size),
-            nn.LeakyReLU())
+            nn.PReLU())
         
         self.next_image_1 = nn.Sequential(
             nn.Linear(args.encode_size + args.hidden_size, args.hidden_size),
-            nn.LeakyReLU(),
+            nn.PReLU(),
             nn.Linear(args.hidden_size, 32 * args.image_size//4 * args.image_size//4),
-            nn.LeakyReLU()) 
+            nn.PReLU()) 
         
         self.next_image_2 = nn.Sequential(
             ConstrainedConv2d(
@@ -77,7 +66,7 @@ class Transitioner(nn.Module):
                 kernel_size = (3,3),
                 padding = (1,1),
                 padding_mode="reflect"),
-            nn.LeakyReLU(),
+            nn.PReLU(),
             nn.Upsample(
                 scale_factor = 2,
                 mode = "bilinear", align_corners=True),
@@ -87,7 +76,7 @@ class Transitioner(nn.Module):
                 kernel_size = (3,3),
                 padding = (1,1),
                 padding_mode="reflect"),
-            nn.LeakyReLU(),
+            nn.PReLU(),
             nn.Upsample(
                 scale_factor = 2,
                 mode = "bilinear", align_corners=True),
@@ -173,9 +162,9 @@ class Actor(nn.Module):
         self.log_std_max = log_std_max
         self.lin = nn.Sequential(
             nn.Linear(args.encode_size, args.hidden_size*2),
-            nn.LeakyReLU(),
+            nn.PReLU(),
             nn.Linear(args.hidden_size*2, args.hidden_size*2),
-            nn.LeakyReLU())
+            nn.PReLU())
         self.mu = nn.Linear(args.hidden_size*2, 2)
         self.log_std_linear = nn.Linear(args.hidden_size*2, 2)
         
@@ -219,9 +208,9 @@ class Critic(nn.Module):
         super(Critic, self).__init__()
         self.lin = nn.Sequential(
             nn.Linear(args.encode_size+2, args.hidden_size*2),
-            nn.LeakyReLU(),
+            nn.PReLU(),
             nn.Linear(args.hidden_size*2, args.hidden_size*2),
-            nn.LeakyReLU(),
+            nn.PReLU(),
             nn.Linear(args.hidden_size*2, 2))
         
         self.lin.apply(init_weights)

@@ -131,7 +131,6 @@ class Agent:
                 fig.subplots_adjust(top=1.2)
                 plt.show()
                 plt.close()
-            print()
             plot_curiosity(rewards.detach(), curiosity.detach(), masks.detach())
             
         extrinsic = torch.mean(rewards*masks.detach()).item()
