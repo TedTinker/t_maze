@@ -46,7 +46,7 @@ def positions(trainer_name, num, load_name, size = 5):
 	positions_list, arena_name = trainer.get_positions(size = size)
 	return(positions_list, arena_name)
  
-agent_variety = 1
+agent_variety = 5
     
 # %%
 for i in range(agent_variety):

@@ -26,7 +26,7 @@ def get_args():
     parser.add_argument('--episodes_per_epoch', type=int,   default = 1)
     parser.add_argument('--show_and_save',      type=int,   default = 100)
     parser.add_argument('--too_long',           type=int,   default = 300)
-    parser.add_argument('--iterations',         type=int,   default = 4)
+    parser.add_argument('--iterations',         type=int,   default = 16)
     parser.add_argument('--batch_size',         type=int,   default = 32)
     parser.add_argument('--hidden_size',        type=int,   default = 128)
     parser.add_argument('--encode_size',        type=int,   default = 128)
